@@ -37,6 +37,22 @@ public class GithubHelper {
         }
     }
 
+    public static GitHub getGitHub(@Nonnull final Job<?, ?> job) throws IOException {
+        final SCMSource scmSource = SCMSource.SourceByItem.findSource(job);
+
+        if (scmSource instanceof GitHubSCMSource) {
+            final GitHubSCMSource gitHubSource = (GitHubSCMSource) scmSource;
+            final StandardCredentials credentials = Connector.lookupScanCredentials(
+                    job,
+                    gitHubSource.getApiUri(),
+                    gitHubSource.getCredentialsId()
+            );
+            return Connector.connect(gitHubSource.getApiUri(), credentials);
+        }
+
+        throw new IllegalArgumentException("Job's SCM is not GitHub.");
+    }
+
     private static GHRepository getGHRepository(@Nonnull final Job<?, ?> job) throws IOException {
         SCMSource scmSource = SCMSource.SourceByItem.findSource(job);
         if (scmSource instanceof GitHubSCMSource) {

@@ -1,5 +1,7 @@
 package com.adobe.jenkins.github_pr_comment_build;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,6 +28,10 @@ import org.kohsuke.github.GHEvent;
 import static com.google.common.collect.Sets.immutableEnumSet;
 import static hudson.security.ACL.as;
 import hudson.security.ACLContext;
+import org.kohsuke.github.GHEventPayload.IssueComment;
+import org.kohsuke.github.GitHub;
+import org.kohsuke.github.ReactionContent;
+
 import java.util.HashSet;
 import static org.kohsuke.github.GHEvent.ISSUE_COMMENT;
 
@@ -168,6 +174,9 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                                                         changedRepository.getRepositoryName()
                                                     }
                                             );
+
+                                            // Add a thumbs up reaction to the triggering comment
+                                            reactScheduled(job, payload);
                                         } else {
                                             LOGGER.log(Level.FINE, "Skipping already triggered job {0}", new Object[] { job });
                                         }
@@ -206,6 +215,18 @@ public class IssueCommentGHEventSubscriber extends GHEventsSubscriber {
                         }
                 );
             }
+        }
+    }
+
+    private void reactScheduled(final Job<?, ?> job, final String payload) {
+        try {
+            final GitHub gitHub = GithubHelper.getGitHub(job);
+            final IssueComment event = gitHub.parseEventPayload(new StringReader(payload), IssueComment.class);
+
+            // noinspection deprecation
+            event.getComment().createReaction(ReactionContent.PLUS_ONE);
+        } catch (final IOException e) {
+            LOGGER.log(Level.WARNING, "Could not react to triggering comment", e);
         }
     }
 }
